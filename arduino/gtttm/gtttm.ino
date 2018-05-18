@@ -91,7 +91,7 @@ enum opState_t{
 // Each cell can be blank (_), have Robot mark (O), or a human mark (X)
 // This will be populated by the JeVois's serial response.
 //
-// Board Numbering Scheme:
+// Board Numbering & Orientation Scheme:
 //              |       |              Positive Z: Down into the paper
 //          0   |   1   |   2          
 //       _______|_______|_______       |
