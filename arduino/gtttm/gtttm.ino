@@ -20,6 +20,12 @@
  */
 
 ////////////////////////////////////////////////////////////
+// Debug print switches
+////////////////////////////////////////////////////////////
+//#define DEBUG_POS
+
+
+////////////////////////////////////////////////////////////
 // Constant Values
 ////////////////////////////////////////////////////////////
 
@@ -49,13 +55,13 @@
 //Other IO
 #define PLAY_BUTTON_PIN 15
 #define PLAY_BUTTON_DBNC_LOOPS 10 //Count to debounce the play button switch for
-#define PLAY_BUTTON_PRESSED TRUE //state that digitalRead should return when pressed
+#define PLAY_BUTTON_PRESSED true //state that digitalRead should return when pressed
 #define BUILT_IN_LED_PIN 13
 
 
 //Motor Motion Constants.
 // With the exception of steps/mm, all distances in mm
-#define STEPS_PER_MM 10000
+#define STEPS_PER_MM 48
 #define GRID_X_OFFSET 10.0
 #define GRID_Y_OFFSET 10.0
 
@@ -65,10 +71,10 @@
 #define CELL_Y_SIZE 10.0
 
 #define DRAWN_CIRCLE_RADIUS CELL_X_SIZE/3.0
-#define DRAWN_CIRCLE_APROX_STEPS 64 //Number of steps to use to approximate a circle with straight lines
+#define DRAWN_CIRCLE_APROX_STEPS 32 //Number of steps to use to approximate a circle with straight lines
 
-#define MAX_SPEED_MM_PER_SEC 200
-#define MAX_ACCE_MM_PER_SEC2 200
+#define MAX_SPEED_MM_PER_SEC 150
+#define MAX_ACCEL_MM_PER_SEC2 150
 
 
 
@@ -80,7 +86,7 @@ enum opState_t{
   WAIT_FOR_BOARD_STATE, //Wait for the Jevois to return the board state
   CALC_MOVE,            //Calculate which cell to put a mark in
   WAIT_FOR_MOVE         //Make the move,slick
-}
+};
 
 
 ////////////////////////////////////////////////////////////
@@ -154,30 +160,32 @@ float circleYCoords[DRAWN_CIRCLE_APROX_STEPS+1] = {0};
 //Sets a new target cell to draw an output in
 //Calculates path constants while it's at it.
 void mvSeqSetTargetCell(int tgt_in){
-  if(targetCell == CELL_UNDEFINED){
-    targetCell = tgt_in;
+  targetCell = tgt_in;
 
-    //Calc the origin of the target cell
-    tgtCellXPos = GRID_X_OFFSET + (CELL_X_SIZE * (float)(tgt_in % 3));
-    tgtCellYPos = GRID_Y_OFFSET + (CELL_Y_SIZE * (float)(tgt_in / 3));
-    
-    //calc the center of the cell
-    tgtCellXCenter = tgtCellXPos + CELL_X_SIZE/2.0;
-    tgtCellYCenter = tgtCellYPos + CELL_Y_SIZE/2.0;
+  //Calc the origin of the target cell
+  tgtCellXPos = GRID_X_OFFSET + (CELL_X_SIZE * (float)(tgt_in % 3));
+  tgtCellYPos = GRID_Y_OFFSET + (CELL_Y_SIZE * (float)(tgt_in / 3));
+  
+  //calc the center of the cell
+  tgtCellXCenter = tgtCellXPos + CELL_X_SIZE/2.0;
+  tgtCellYCenter = tgtCellYPos + CELL_Y_SIZE/2.0;
 
-    //Calc the points on the circle
-    for(int pointIdx = 0; pointIdx < DRAWN_CIRCLE_APROX_STEPS+1;  pointIdx++){
-      float angleRad = ((float)(pointIdx)) / ((float)DRAWN_CIRCLE_APROX_STEPS) * 2.0 * 3.14159;
-      circleXCoords[pointIdx] = tgtCellXCenter + DRAWN_CIRCLE_RADIUS * sin( angleRad );
-      circleYCoords[pointIdx] = tgtCellYCenter + DRAWN_CIRCLE_RADIUS * cos( angleRad );
-    }
-
-    moveInProcess = true;
-    newStep = true;
-
-    Serial.print("Finished calculating new path.");
+  //Calc the points on the circle
+  for(int pointIdx = 0; pointIdx < DRAWN_CIRCLE_APROX_STEPS+1;  pointIdx++){
+    float angleRad = ((float)(pointIdx)) / ((float)DRAWN_CIRCLE_APROX_STEPS) * 2.0 * 3.14159;
+    circleXCoords[pointIdx] = tgtCellXCenter + DRAWN_CIRCLE_RADIUS * sin( angleRad );
+    circleYCoords[pointIdx] = tgtCellYCenter + DRAWN_CIRCLE_RADIUS * cos( angleRad );
   }
+
+  moveInProcess = true;
+  sequenceStep = 0;
+  newStep = true;
+
+  Serial.println("Finished calculating new path.");
 }
+
+
+unsigned int updateCtr = 0;
 
 void mvSeqUpdate(){
   //Circle-draw algorithm
@@ -188,54 +196,68 @@ void mvSeqUpdate(){
 
     if(sequenceStep == 0){
       //Move to start of circle
-      stepperX.moveTo(circleXCoords[0]);
-      stepperY.moveTo(circleYCoords[0]);
-      stepperZ.moveTo(PEN_UP_POS);
+      stepperX.moveTo(mmToSteps(circleXCoords[0]));
+      stepperY.moveTo(mmToSteps(circleYCoords[0]));
+      stepperZ.moveTo(mmToSteps(PEN_UP_POS));
     } else if(sequenceStep == 1){
       //Lower pen
-      stepperX.moveTo(circleXCoords[0]);
-      stepperY.moveTo(circleYCoords[0]);
-      stepperZ.moveTo(PEN_DOWN_POS);
+      stepperX.moveTo(mmToSteps(circleXCoords[0]));
+      stepperY.moveTo(mmToSteps(circleYCoords[0]));
+      stepperZ.moveTo(mmToSteps(PEN_DOWN_POS));
     } else if(sequenceStep >= 2 && sequenceStep <= DRAWN_CIRCLE_APROX_STEPS + 2){
       //Draw circle
-      stepperX.moveTo(circleXCoords[sequenceStep-2]);
-      stepperY.moveTo(circleYCoords[sequenceStep-2]);
-      stepperZ.moveTo(PEN_DOWN_POS);
+      stepperX.moveTo(mmToSteps(circleXCoords[sequenceStep-2]));
+      stepperY.moveTo(mmToSteps(circleYCoords[sequenceStep-2]));
+      stepperZ.moveTo(mmToSteps(PEN_DOWN_POS));
     } else if(sequenceStep == DRAWN_CIRCLE_APROX_STEPS + 3){
       //Raise pen
-      stepperX.moveTo(circleXCoords[DRAWN_CIRCLE_APROX_STEPS]);
-      stepperY.moveTo(circleYCoords[DRAWN_CIRCLE_APROX_STEPS]);
-      stepperZ.moveTo(PEN_UP_POS);
+      stepperX.moveTo(mmToSteps(circleXCoords[DRAWN_CIRCLE_APROX_STEPS]));
+      stepperY.moveTo(mmToSteps(circleYCoords[DRAWN_CIRCLE_APROX_STEPS]));
+      stepperZ.moveTo(mmToSteps(PEN_UP_POS));
     }else if(sequenceStep == DRAWN_CIRCLE_APROX_STEPS + 4){
       //Move home
-      stepperX.moveTo(0);
-      stepperY.moveTo(0);
-      stepperZ.moveTo(PEN_UP_POS);
+      stepperX.moveTo(mmToSteps(0));
+      stepperY.moveTo(mmToSteps(0));
+      stepperZ.moveTo(mmToSteps(PEN_UP_POS));
     } else {
       //IDK let's go home
-      stepperX.moveTo(0);
-      stepperY.moveTo(0);
-      stepperZ.moveTo(PEN_UP_POS);
+      stepperX.moveTo(mmToSteps(0));
+      stepperY.moveTo(mmToSteps(0));
+      stepperZ.moveTo(mmToSteps(PEN_UP_POS));
     }
   }
 
-
   //If we're at 0 distance-to-go, we can move on to the next step
-  if(stepperX.distanceToGo() == 0 &&
-     stepperY.distanceToGo() == 0 &&
-     stepperZ.distanceToGo() == 0 ) {
+  if(stepperX.isRunning() == false &&
+     stepperY.isRunning() == false &&
+     stepperZ.isRunning() == false ) {
+
        sequenceStep++;
-
        newStep = true;
+       moveInProcess = true;
 
+       Serial.print("Finished step ");
+       Serial.println(sequenceStep-1);
        if( sequenceStep > TOTAL_STEPS){
+         //All done, clean up variable state
          moveInProcess = false;
-         newStep = true;
+         newStep = false;
          sequenceStep = 0;
        }
        
   } else {
     newStep = false;
+    moveInProcess = true;
+    
+  #ifdef DEBUG_POS
+    Serial.println("\n\n===============");
+    Serial.print("POS X = ");
+    Serial.println(stepperX.currentPosition());
+    Serial.print("POS Y = ");
+    Serial.println(stepperY.currentPosition());
+    Serial.print("POS Z = ");
+    Serial.println(stepperZ.currentPosition());
+  #endif
   }
 
 }
@@ -274,6 +296,21 @@ int moveCalculator(){
 //converts mm to steps
 float mmToSteps(float mm){
   return STEPS_PER_MM * mm;
+}
+
+void printBoardState(void){
+  Serial.println("Board State:");
+  Serial.println("       |     |     ");   
+  Serial.print("    ");Serial.print(BoardState[0]);Serial.print("  |  ");Serial.print(BoardState[1]);Serial.print("  |  ");Serial.print(BoardState[2]);Serial.print("  \n");
+  Serial.println("       |     |     "); 
+  Serial.println("  -----+-----+-----"); 
+  Serial.println("       |     |     "); 
+  Serial.print("    ");Serial.print(BoardState[3]);Serial.print("  |  ");Serial.print(BoardState[4]);Serial.print("  |  ");Serial.print(BoardState[5]);Serial.print("  \n");
+  Serial.println("       |     |     "); 
+  Serial.println("  -----+-----+-----"); 
+  Serial.println("       |     |     "); 
+  Serial.print("    ");Serial.print(BoardState[6]);Serial.print("  |  ");Serial.print(BoardState[7]);Serial.print("  |  ");Serial.print(BoardState[8]);Serial.print("  \n");
+  Serial.println("       |     |     "); 
 }
 
 
@@ -331,6 +368,11 @@ void loop() {
         playButtonDbncCounter = PLAY_BUTTON_DBNC_LOOPS;
       }
 
+      //Flush the jevois serial port
+      while(Serial1.available() != 0){
+        Serial1.read(); //Discard remaining buffer contents
+      }
+
     break;
 
     case REQ_BOARD_STATE:
@@ -342,11 +384,23 @@ void loop() {
       if(Serial1.available() >= 10){
         for(int cellIdx = 0; cellIdx < 9; cellIdx++){
           BoardState[cellIdx] = Serial1.read();
+          
         }
         boardStateRXed = true;
         while(Serial1.available() != 0){
           Serial1.read(); //Discard remaining buffer contents
         }
+
+        //DEBUG ONLY EMOVE ME WHEN DONE
+        BoardState[0] = ' ';
+        BoardState[1] = 'X'; 
+        BoardState[2] = 'O'; 
+        BoardState[3] = 'O'; 
+        BoardState[4] = 'O'; 
+        BoardState[5] = ' '; 
+        BoardState[6] = 'X'; 
+        BoardState[7] = ' '; 
+        BoardState[8] = 'X';  
       }
     break;
 
@@ -383,6 +437,7 @@ void loop() {
     case WAIT_FOR_BOARD_STATE:
       if(boardStateRXed){
         Serial.println("Got board state, calculating move...");
+        printBoardState();
         State = CALC_MOVE;
       } else {
         State = WAIT_FOR_BOARD_STATE;
@@ -391,7 +446,7 @@ void loop() {
 
     case CALC_MOVE:
       Serial.println("Performing move...");
-      State = WAIT_FOR_BOARD_STATE;
+      State = WAIT_FOR_MOVE;
     break;
 
     case WAIT_FOR_MOVE:
