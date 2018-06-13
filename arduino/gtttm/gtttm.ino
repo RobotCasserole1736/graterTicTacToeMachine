@@ -64,7 +64,7 @@
 
 //Motor Motion Constants.
 // With the exception of steps/mm, all distances in mm
-#define STEPS_PER_MM 48
+#define STEPS_PER_MM 500
 #define GRID_X_OFFSET 10.0
 #define GRID_Y_OFFSET 10.0
 
@@ -74,10 +74,10 @@
 #define CELL_Y_SIZE 10.0
 
 #define DRAWN_CIRCLE_RADIUS CELL_X_SIZE/3.0
-#define DRAWN_CIRCLE_APROX_STEPS 32 //Number of steps to use to approximate a circle with straight lines
+#define DRAWN_CIRCLE_APROX_STEPS 16 //Number of steps to use to approximate a circle with straight lines
 
-#define MAX_SPEED_MM_PER_SEC 150
-#define MAX_ACCEL_MM_PER_SEC2 150
+#define MAX_SPEED_MM_PER_SEC 1.8
+#define MAX_ACCEL_MM_PER_SEC2 10
 
 
 
@@ -116,9 +116,11 @@ char BoardState[9];
 opState_t State;
 
 //Stepper Motor Objects
-AccelStepper stepperX(HALFSTEP, X_STEPPER_PIN_1, X_STEPPER_PIN_2, X_STEPPER_PIN_3, X_STEPPER_PIN_4);
-AccelStepper stepperY(HALFSTEP, Y_STEPPER_PIN_1, Y_STEPPER_PIN_2, Y_STEPPER_PIN_3, Y_STEPPER_PIN_4);
-AccelStepper stepperZ(HALFSTEP, Z_STEPPER_PIN_1, Z_STEPPER_PIN_2, Z_STEPPER_PIN_3, Z_STEPPER_PIN_4);
+//Note pins 2/3 are flipped for reasons (????)
+//The electrical hookup should match the macro definitions
+AccelStepper stepperX(HALFSTEP, X_STEPPER_PIN_1, X_STEPPER_PIN_3, X_STEPPER_PIN_2, X_STEPPER_PIN_4);
+AccelStepper stepperY(HALFSTEP, Y_STEPPER_PIN_1, Y_STEPPER_PIN_3, Y_STEPPER_PIN_2, Y_STEPPER_PIN_4);
+AccelStepper stepperZ(HALFSTEP, Z_STEPPER_PIN_1, Z_STEPPER_PIN_3, Z_STEPPER_PIN_2, Z_STEPPER_PIN_4);
 
 //Play button debouncing
 unsigned int playButtonDbncCounter = PLAY_BUTTON_DBNC_LOOPS;
@@ -371,6 +373,11 @@ void loop() {
         playButtonDbncCounter = PLAY_BUTTON_DBNC_LOOPS;
       }
 
+      //debug
+      if(Serial.read() == 'w'){
+        playButtonDbncCounter = 0;
+      }
+
       //Flush the jevois serial port
       while(Serial1.available() != 0){
         Serial1.read(); //Discard remaining buffer contents
@@ -384,7 +391,7 @@ void loop() {
     break;
 
     case WAIT_FOR_BOARD_STATE:
-      if(Serial1.available() >= 10){
+      if(Serial1.available() >= 10 || Serial.read() == 'g'){
         for(int cellIdx = 0; cellIdx < 9; cellIdx++){
           BoardState[cellIdx] = Serial1.read();
           
