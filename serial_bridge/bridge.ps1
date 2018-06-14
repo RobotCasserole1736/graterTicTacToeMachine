@@ -7,6 +7,9 @@ $arduino_port = new-Object System.IO.Ports.SerialPort $arduino_port_name,115200,
 $jevois_port.ReadTimeout = 50
 $arduino_port.ReadTimeout = 50
 
+echo "[bridge] Starting JeVois"
+
+$jevois_port.write("GRATERTTT")
 
 echo "[bridge] Starting serial listening. Press Q to quit."
 
@@ -18,7 +21,6 @@ while($true){
         $arduino_output = $arduino_port.ReadLine()
         echo $jevois_output
         echo $arduino_port
-        $jevois_port.write($arduino_output)
         $arduino_port.write($jevois_output)
         
     } catch {

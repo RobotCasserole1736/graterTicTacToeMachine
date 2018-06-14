@@ -17,7 +17,7 @@
                 ""--..   |
                       ""-' 
  * 
- * 
+ * Serial
  * See License.txt in the root of the repo!
  */
 
@@ -328,8 +328,7 @@ void printBoardState(void){
 void setup() {
 
   //Serial setup
-  Serial.begin(115200); //Debug serial port
-  Serial1.begin(115200); //JeVois Communication
+  Serial.begin(115200); //Debug & command serial port
 
   Serial.println("+++++++++++++++++++++++++++++++++++++++");
   Serial.println("+++  WELCOME TO GRATER TIC TAC TOE  +++");
@@ -374,43 +373,32 @@ void loop() {
       }
 
       //debug
-      if(Serial.read() == 'w'){
+      if(Serial.read() == 'g'){
         playButtonDbncCounter = 0;
       }
 
       //Flush the jevois serial port
-      while(Serial1.available() != 0){
-        Serial1.read(); //Discard remaining buffer contents
+      while(Serial.available() != 0){
+        Serial.read(); //Discard remaining buffer contents
       }
 
     break;
 
     case REQ_BOARD_STATE:
       //Send command to JeVois
-      Serial1.write(JEVOIS_BOARD_STATE_REQ_STR);
+      Serial.write(JEVOIS_BOARD_STATE_REQ_STR);
     break;
 
     case WAIT_FOR_BOARD_STATE:
-      if(Serial1.available() >= 10 || Serial.read() == 'g'){
+      if(Serial.available() >= 10 || Serial.peek() == 'g'){
         for(int cellIdx = 0; cellIdx < 9; cellIdx++){
-          BoardState[cellIdx] = Serial1.read();
+          BoardState[cellIdx] = Serial.read();
           
         }
         boardStateRXed = true;
-        while(Serial1.available() != 0){
-          Serial1.read(); //Discard remaining buffer contents
+        while(Serial.available() != 0){
+          Serial.read(); //Discard remaining buffer contents
         }
-
-        //DEBUG ONLY EMOVE ME WHEN DONE
-        BoardState[0] = ' ';
-        BoardState[1] = 'X'; 
-        BoardState[2] = 'O'; 
-        BoardState[3] = 'O'; 
-        BoardState[4] = 'O'; 
-        BoardState[5] = ' '; 
-        BoardState[6] = 'X'; 
-        BoardState[7] = ' '; 
-        BoardState[8] = 'X';  
       }
     break;
 
