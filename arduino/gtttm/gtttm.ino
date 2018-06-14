@@ -52,7 +52,7 @@
 #define HALFSTEP 8
 
 //Jevois interaface
-#define JEVOIS_BOARD_STATE_REQ_STR "read\n"
+#define JEVOIS_BOARD_STATE_REQ_STR "GRATERTTT\n"
 #define JEVOIS_READ_TIMEOUT_MS 10000
 
 //Other IO
