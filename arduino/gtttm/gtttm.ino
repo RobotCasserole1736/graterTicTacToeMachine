@@ -17,11 +17,14 @@
                 ""--..   |
                       ""-' 
  * 
+ * 
+ * See License.txt in the root of the repo!
  */
 
 ////////////////////////////////////////////////////////////
 // Debug print switches
 ////////////////////////////////////////////////////////////
+//Uncomment this to get a bunch more spammed to the debug serial port
 //#define DEBUG_POS
 
 
