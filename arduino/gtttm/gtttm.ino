@@ -64,21 +64,23 @@
 
 //Motor Motion Constants.
 // With the exception of steps/mm, all distances in mm
-#define STEPS_PER_MM 500
-#define GRID_X_OFFSET 10.0
-#define GRID_Y_OFFSET 10.0
+#define STEPS_PER_MM 60
+#define GRID_X_OFFSET 50.0
+#define GRID_Y_OFFSET 50.0
 
 #define PEN_UP_POS 0.0
-#define PEN_DOWN_POS 10.0
+#define PEN_DOWN_POS -50.0
 #define CELL_X_SIZE 10.0
 #define CELL_Y_SIZE 10.0
 
 #define DRAWN_CIRCLE_RADIUS CELL_X_SIZE/3.0
 #define DRAWN_CIRCLE_APROX_STEPS 16 //Number of steps to use to approximate a circle with straight lines
 
-#define MAX_SPEED_MM_PER_SEC 1.8
-#define MAX_ACCEL_MM_PER_SEC2 10
+#define MAX_SPEED_MM_PER_SEC 12
+#define MAX_ACCEL_MM_PER_SEC2 100
 
+//#define MAX_SPEED_MM_PER_SEC 5000
+//#define MAX_ACCEL_MM_PER_SEC2 5000
 
 
 
@@ -291,10 +293,28 @@ void resetState(){
 //Returns an index 0-8 to say where the robot should place a 
 // mark. Should calculate this based on BoardState.
 int moveCalculator(){
+  int des_move = 0;
+  int avail_cells[9] = {0};
+  int num_avail_cells = 0;
+
+  //Populate the array of available moves
+  for(int cell = 0; cell < 9; cell++){
+    if(BoardState[cell] == ' '){
+      avail_cells[num_avail_cells++] = cell;
+    }
+  }
+
+  //Check for no move available
+  if(num_avail_cells == 0){
+    return -1;
+  }
+  
   //TODO: Fill me in with logic to win against the kids, but not too hard
 
-  //Temp: Stupid robot.
-  return 8;
+  //else: choose randomly
+  des_move = avail_cells[random(0,num_avail_cells)];
+
+  return des_move;
 
 }
 
@@ -364,13 +384,13 @@ void loop() {
   switch(State){
     case WAIT_FOR_USER:
       //Debounce the play button
-      if(digitalRead(PLAY_BUTTON_PIN) == PLAY_BUTTON_PRESSED){
-        if(playButtonDbncCounter != 0){
-          playButtonDbncCounter--;
-        }
-      } else {
+     // if(digitalRead(PLAY_BUTTON_PIN) == PLAY_BUTTON_PRESSED){
+       // if(playButtonDbncCounter != 0){
+        //  playButtonDbncCounter--;
+       // }
+      //} else {
         playButtonDbncCounter = PLAY_BUTTON_DBNC_LOOPS;
-      }
+      //}
 
       //debug
       if(Serial.read() == 'g'){
@@ -390,7 +410,8 @@ void loop() {
     break;
 
     case WAIT_FOR_BOARD_STATE:
-      if(Serial.available() >= 10 || Serial.peek() == 'g'){
+      if(Serial.read() == '^'){
+        while(Serial.available() < 9){};
         for(int cellIdx = 0; cellIdx < 9; cellIdx++){
           BoardState[cellIdx] = Serial.read();
           

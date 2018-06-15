@@ -1,5 +1,5 @@
-$jevois_port_name  = "COM6"
-$arduino_port_name = "COM4"
+$jevois_port_name  = "COM4"
+$arduino_port_name = "COM5"
 
 $jevois_port = new-Object System.IO.Ports.SerialPort $jevois_port_name,115200,None,8,one
 $arduino_port = new-Object System.IO.Ports.SerialPort $arduino_port_name,115200,None,8,one
@@ -7,8 +7,8 @@ $arduino_port = new-Object System.IO.Ports.SerialPort $arduino_port_name,115200,
 $jevois_port.Open()
 $arduino_port.Open()
 
-$jevois_port.ReadTimeout = 200
-$arduino_port.ReadTimeout = 200
+$jevois_port.ReadTimeout = 50
+$arduino_port.ReadTimeout = 50
 
 echo "[bridge] Starting serial listening. Press Q to quit."
 
@@ -39,7 +39,7 @@ while($true){
         } elseif  (($key.key -eq "g")) {
             echo "[bridge] Sending start command"
             $arduino_port.write("g")
-			$jevois_port.write("GRATERTTM")
+			$jevois_port.WriteLine("GRATERTTT")
         }
     }
     
